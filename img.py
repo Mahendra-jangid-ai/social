@@ -10,7 +10,7 @@ import os
 # 🔐 LOAD API KEY
 # ============================================================
 
-GROQ_API_KEY = "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"
+# GROQ_API_KEY = "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"
 if not GROQ_API_KEY:
     raise RuntimeError("GROQ_API_KEY not set in environment")
 
