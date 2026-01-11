@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 APP_ID = os.environ.get("APP_ID")
 APP_SECRET = os.environ.get("APP_SECRET")
-REDIRECT_URI = os.environ.get("REDIRECT_URI")
+REDIRECT_URI = 'https://social-1-shd.onrender.com/callback'
 
 SCOPES = ["instagram_basic", "pages_show_list", "business_management"]
 
