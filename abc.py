@@ -1,0 +1,74 @@
+import os
+from flask import Flask, redirect, request
+import requests
+import urllib.parse
+
+app = Flask(__name__)
+
+APP_ID = os.environ.get("APP_ID")
+APP_SECRET = os.environ.get("APP_SECRET")
+REDIRECT_URI = os.environ.get("REDIRECT_URI")
+
+SCOPES = ["instagram_basic", "pages_show_list", "business_management"]
+
+@app.route("/")
+def index():
+    params = {
+        "client_id": APP_ID,
+        "redirect_uri": REDIRECT_URI,
+        "scope": ",".join(SCOPES),
+        "response_type": "code",
+        "state": "12345"
+    }
+    login_url = "https://www.facebook.com/v19.0/dialog/oauth?" + urllib.parse.urlencode(params)
+    return f'<a href="{login_url}">Login with Facebook</a>'
+
+@app.route("/callback")
+def callback():
+    code = request.args.get("code")
+
+    token_url = "https://graph.facebook.com/v19.0/oauth/access_token"
+    token_params = {
+        "client_id": APP_ID,
+        "client_secret": APP_SECRET,
+        "redirect_uri": REDIRECT_URI,
+        "code": code
+    }
+    token_res = requests.get(token_url, params=token_params).json()
+    access_token = token_res["access_token"]
+
+    pages = requests.get(
+        "https://graph.facebook.com/v19.0/me/accounts",
+        params={"access_token": access_token}
+    ).json()
+
+    page_id = pages["data"][0]["id"]
+
+    ig_data = requests.get(
+        f"https://graph.facebook.com/v19.0/{page_id}",
+        params={
+            "fields": "instagram_business_account",
+            "access_token": access_token
+        }
+    ).json()
+
+    ig_user_id = ig_data["instagram_business_account"]["id"]
+
+    media = requests.get(
+        f"https://graph.facebook.com/v19.0/{ig_user_id}/media",
+        params={
+            "fields": "id,caption,media_type,media_url,timestamp",
+            "access_token": access_token
+        }
+    ).json()
+
+    return {
+        "access_token": access_token,
+        "page_id": page_id,
+        "instagram_user_id": ig_user_id,
+        "media": media
+    }
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
