@@ -1,7 +1,6 @@
 import os
-from flask import Flask, redirect, request
-import requests
-import urllib.parse
+from flask import Flask, request
+import requests, urllib.parse
 
 app = Flask(__name__)
 
@@ -17,25 +16,26 @@ def index():
         "client_id": APP_ID,
         "redirect_uri": REDIRECT_URI,
         "scope": ",".join(SCOPES),
-        "response_type": "code",
-        "state": "12345"
+        "response_type": "code"
     }
-    login_url = "https://www.facebook.com/v19.0/dialog/oauth?" + urllib.parse.urlencode(params)
-    return f'<a href="{login_url}">Login with Facebook</a>'
+    url = "https://www.facebook.com/v19.0/dialog/oauth?" + urllib.parse.urlencode(params)
+    return f"<h2>Instagram Business Login</h2><a href='{url}'>Login with Facebook</a>"
 
 @app.route("/callback")
 def callback():
     code = request.args.get("code")
 
-    token_url = "https://graph.facebook.com/v19.0/oauth/access_token"
-    token_params = {
-        "client_id": APP_ID,
-        "client_secret": APP_SECRET,
-        "redirect_uri": REDIRECT_URI,
-        "code": code
-    }
-    token_res = requests.get(token_url, params=token_params).json()
-    access_token = token_res["access_token"]
+    token = requests.get(
+        "https://graph.facebook.com/v19.0/oauth/access_token",
+        params={
+            "client_id": APP_ID,
+            "client_secret": APP_SECRET,
+            "redirect_uri": REDIRECT_URI,
+            "code": code
+        }
+    ).json()
+
+    access_token = token["access_token"]
 
     pages = requests.get(
         "https://graph.facebook.com/v19.0/me/accounts",
@@ -44,7 +44,7 @@ def callback():
 
     page_id = pages["data"][0]["id"]
 
-    ig_data = requests.get(
+    ig = requests.get(
         f"https://graph.facebook.com/v19.0/{page_id}",
         params={
             "fields": "instagram_business_account",
@@ -52,12 +52,12 @@ def callback():
         }
     ).json()
 
-    ig_user_id = ig_data["instagram_business_account"]["id"]
+    ig_user_id = ig["instagram_business_account"]["id"]
 
     media = requests.get(
         f"https://graph.facebook.com/v19.0/{ig_user_id}/media",
         params={
-            "fields": "id,caption,media_type,media_url,timestamp",
+            "fields": "id,media_type,media_url,caption,timestamp",
             "access_token": access_token
         }
     ).json()
@@ -70,5 +70,5 @@ def callback():
     }
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
